@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>玉簟秋互动游戏——虞昶轩视角</title>
+<style>
+  :root{
+    --ink:#1a1a22; --paper:#f5f0e6; --jade:#3d5a4c; --crimson:#8e2f2f; --gold:#b8965a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    font-family:"STKaiti","KaiTi","STSong","SimSun",serif;
+    background:var(--ink); color:var(--paper); overflow:hidden;
+    -webkit-user-select:none;user-select:none;
+  }
+  /* 背景层：优先 bg/{轮次}.jpg|.png → bg/default.jpg|.png → 内建水墨渐变 */
+  #bg{
+    position:fixed;inset:0;z-index:0;
+    background:
+      radial-gradient(ellipse at 70% 20%, rgba(184,150,90,.14), transparent 55%),
+      radial-gradient(ellipse at 20% 85%, rgba(142,47,47,.16), transparent 50%),
+      linear-gradient(160deg,#23232e 0%,#1a1a22 45%,#241d22 100%);
+    background-size:cover;background-position:center;
+    transition:background-image 1.2s ease;
+  }
+  #bg::after{
+    content:"";position:absolute;inset:0;
+    background:linear-gradient(to bottom, rgba(10,10,14,.25), rgba(10,10,14,.72) 78%, rgba(10,10,14,.88));
+  }
+  /* 玉簪花水印 */
+  #emblem{
+    position:fixed;top:26px;left:50%;transform:translateX(-50%);z-index:2;
+    font-size:13px;letter-spacing:.6em;color:rgba(184,150,90,.65);
+    writing-mode:horizontal-tb;pointer-events:none;
+  }
+  /* 标题屏 */
+  #title-screen{
+    position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:22px;text-align:center;padding:24px;
+  }
+  #title-screen h1{
+    font-size:clamp(54px,11vw,104px);font-weight:400;letter-spacing:.28em;
+    text-indent:.28em;color:var(--paper);
+    text-shadow:0 0 30px rgba(184,150,90,.35);
+    animation:fadeUp 1.6s ease both;
+  }
+  #title-screen .sub{
+    font-size:15px;letter-spacing:.42em;text-indent:.42em;color:rgba(245,240,230,.55);
+    animation:fadeUp 1.6s .3s ease both;
+  }
+  #title-screen .poem{
+    margin-top:6px;font-size:14px;line-height:2.2;color:rgba(245,240,230,.42);
+    animation:fadeUp 1.6s .55s ease both;
+  }
+  .btn{
+    font-family:inherit;cursor:pointer;border:1px solid rgba(184,150,90,.55);
+    background:rgba(26,26,34,.55);color:var(--paper);
+    padding:13px 46px;font-size:17px;letter-spacing:.35em;text-indent:.35em;
+    border-radius:2px;transition:all .35s;backdrop-filter:blur(4px);
+  }
+  .btn:hover{border-color:var(--gold);background:rgba(184,150,90,.16);box-shadow:0 0 24px rgba(184,150,90,.22);}
+  #title-screen .btn{animation:fadeUp 1.6s .8s ease both;}
+  #title-screen .note{
+    margin-top:26px;font-size:12px;color:rgba(245,240,230,.3);letter-spacing:.12em;line-height:2;
+    animation:fadeUp 1.6s 1.1s ease both;
+  }
+  @keyframes fadeUp{from{opacity:0;transform:translateY(26px);}to{opacity:1;transform:none;}}
+  /* 游戏屏 */
+  #game-screen{position:fixed;inset:0;z-index:5;display:none;}
+  #hud{
+    position:absolute;top:18px;left:0;right:0;z-index:6;
+    display:flex;justify-content:space-between;align-items:center;padding:0 26px;
+    font-size:13px;letter-spacing:.2em;color:rgba(245,240,230,.6);
+  }
+  #hud .tend{cursor:pointer;}
+  #panel{
+    position:absolute;left:50%;bottom:0;transform:translateX(-50%);
+    width:min(860px,94vw);z-index:6;
+    background:linear-gradient(to top, rgba(14,14,18,.92), rgba(14,14,18,.78) 82%, transparent);
+    padding:34px 34px 26px;border-radius:10px 10px 0 0;
+    display:flex;flex-direction:column;gap:16px;max-height:62vh;
+  }
+  #scene-title{
+    font-size:15px;letter-spacing:.4em;color:var(--gold);text-align:center;
+  }
+  #scene-title::before,#scene-title::after{content:"—— ";color:rgba(184,150,90,.4);}
+  #scene-title::after{content:" ——";}
+  #scene-text{
+    -webkit-user-select:text;user-select:text;
+    font-size:17.5px;line-height:2.05;letter-spacing:.05em;
+    color:rgba(245,240,230,.94);white-space:pre-wrap;
+    overflow-y:auto;min-height:120px;padding-right:6px;
+  }
+  #scene-text::-webkit-scrollbar{width:4px;}
+  #scene-text::-webkit-scrollbar-thumb{background:rgba(184,150,90,.4);border-radius:2px;}
+  #choices{display:flex;flex-direction:column;gap:12px;}
+  .choice{
+    font-family:inherit;cursor:pointer;text-align:left;
+    border:1px solid rgba(245,240,230,.22);border-left:3px solid var(--jade);
+    background:rgba(245,240,230,.05);color:var(--paper);
+    padding:13px 18px;font-size:16px;line-height:1.8;letter-spacing:.04em;border-radius:2px;
+    transition:all .3s;opacity:0;transform:translateY(14px);
+    animation:choiceIn .5s ease forwards;
+  }
+  .choice:nth-child(2){border-left-color:var(--crimson);animation-delay:.12s;}
+  .choice:hover{background:rgba(245,240,230,.12);border-color:var(--gold);transform:translateX(6px);}
+  .choice .tag{color:var(--gold);margin-right:10px;}
+  @keyframes choiceIn{to{opacity:1;transform:none;}}
+  #next-btn{align-self:center;display:none;}
+  #skip-tip{
+    position:absolute;right:30px;bottom:calc(100% + 8px);
+    font-size:11px;color:rgba(245,240,230,.3);letter-spacing:.15em;pointer-events:none;
+  }
+  /* 结局屏 */
+  #end-screen{
+    position:fixed;inset:0;z-index:10;display:none;flex-direction:column;
+    align-items:center;justify-content:center;gap:18px;text-align:center;padding:24px;
+    background:rgba(10,10,14,.55);backdrop-filter:blur(3px);
+  }
+  #end-title{font-size:clamp(30px,6vw,52px);letter-spacing:.3em;text-indent:.3em;color:var(--gold);}
+  #end-stats{font-size:14px;letter-spacing:.25em;color:rgba(245,240,230,.55);line-height:2.2;}
+ 
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div id="emblem">玉簪花开 香残藕谢</div>
+
+<div id="title-screen">
+  <h1>玉簟秋</h1>
+  <div class="sub">虞昶轩视角</div>
+  <div class="poem">两处相思同淋雪，此生也算共白头。</div>
+  <button class="btn" id="start-btn">开局</button>
+  <button class="btn" id="continue-btn" style="display:none">续 前 缘</button>
+  <div class="note">剧情各殊，树生双枝</div>
+</div>
+
+<div id="game-screen">
+  <div id="hud">
+    <span id="round-hud">第一轮</span>
+    <span class="tend" id="tend-hud" title="点击显隐心迹">心迹 ▸</span>
+  </div>
+  <div id="panel">
+    <div id="skip-tip">点击文本可跳过打字</div>
+    <div id="scene-title"></div>
+    <div id="scene-text"></div>
+    <div id="choices"></div>
+    <button class="btn" id="next-btn">继 续</button>
+  </div>
+</div>
+
+<div id="end-screen">
+  <div id="end-title"></div>
+  <div id="end-stats"></div>
+  <button class="btn" id="restart-btn">再 历 一 世</button>
+</div>
+
+
+<script src="story.js"></script>
+<script src="story2.js"></script>
+<script>
+(function(){
+  "use strict";
+  var ROUNDS = (window.STORY||[]).concat(window.STORY2||[]);
+  var SAVE_KEY = "yudianqiu_save_v1";
+  var state = { i:0, tendA:0, tendB:0, path:null, phase:"text" }; // phase: text|outcome|end
+  var typing = null, typeDone = null, fullText = "";
+
+  var $ = function(id){ return document.getElementById(id); };
+  var cn = ["零","一","二","三","四","五","六","七","八","九","十"];
+  function cnNum(n){
+    if(n<=10) return cn[n];
+    if(n<20) return "十"+cn[n-10];
+    var t = Math.floor(n/10), u = n%10;
+    return cn[t]+"十"+(u?cn[u]:"");
+  }
+
+  /* ---------- 背景图：bg/{n}.jpg → bg/{n}.png → bg/default.jpg|png → 内建渐变 ---------- */
+  var bgCache = {};
+  function setBg(n, cb){
+    if(bgCache[n] !== undefined){ applyBg(bgCache[n]); cb && cb(); return; }
+    var cands = [];
+    if(n){ cands.push("bg/"+n+".jpg","bg/"+n+".png"); }
+    cands.push("bg/default.jpg","bg/default.png");
+    var k = 0;
+    (function tryNext(){
+      if(k >= cands.length){ bgCache[n] = null; applyBg(null); cb && cb(); return; }
+      var src = cands[k++], img = new Image();
+      img.onload = function(){ bgCache[n] = src; applyBg(src); cb && cb(); };
+      img.onerror = tryNext;
+      img.src = src;
+    })();
+  }
+  function applyBg(src){
+    var el = $("bg");
+    if(!src){ el.style.backgroundImage = ""; return; }
+    el.style.backgroundImage =
+  "linear-gradient(to bottom, rgba(10,10,14,.10), rgba(10,10,14,.30) 75%, rgba(10,10,14,.50)), url('" + src + "')";
+  }
+
+  /* ---------- 打字机 ---------- */
+    /* ---------- 打字机 ---------- */
+  function typeText(text, done){
+    clearInterval(typing); typeDone = done || null; fullText = text;
+    var el = $("scene-text"); el.textContent = "";
+    var idx = 0;
+    typing = setInterval(function(){
+      idx += 2;
+      if(idx >= text.length){ finishType(); return; }
+      el.textContent = text.slice(0, idx);
+      el.scrollTop = el.scrollHeight;
+    }, 80);          // ← 原来是 24，改成 60
+  }
+  function finishType(){
+    clearInterval(typing); typing = null;
+    $("scene-text").textContent = fullText;
+    $("scene-text").scrollTop = $("scene-text").scrollHeight;
+    var d = typeDone; typeDone = null;
+    d && d();
+  }
+  $("scene-text").addEventListener("click", function(){
+    if(typing){ finishType(); }
+  });
+
+  /* ---------- 流程 ---------- */
+  function save(){
+    try{ localStorage.setItem(SAVE_KEY, JSON.stringify({i:state.i, tendA:state.tendA, tendB:state.tendB, path:state.path})); }catch(e){}
+  }
+  function load(){
+    try{ var s = JSON.parse(localStorage.getItem(SAVE_KEY)); if(s && s.i>0 && s.i<ROUNDS.length) return s; }catch(e){}
+    return null;
+  }
+  function clearSave(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+
+  function hud(){
+    var r = ROUNDS[state.i];
+    $("round-hud").textContent = "第"+cnNum(r.round)+"轮";
+    var t = $("tend-hud");
+    if(t._open){ t.textContent = "隐忍 "+state.tendA+" 偏执 "+state.tendB+" ▾"; }
+    else{ t.textContent = "心迹 ▸"; }
+  }
+  $("tend-hud").addEventListener("click", function(){ this._open = !this._open; hud(); });
+
+  function showRound(){
+    var r = ROUNDS[state.i];
+    state.phase = "text"; save();
+    hud(); setBg(r.round);
+    $("choices").innerHTML = ""; $("next-btn").style.display = "none";
+    $("scene-title").textContent = "第"+cnNum(r.round)+"轮 ｜ "+r.title;
+    var scene = r.text;
+    if(state.path === "A" && r.bridgeA){ scene = r.bridgeA + "\n\n" + r.text; }
+    else if(state.path === "B" && r.bridgeB){ scene = r.bridgeB + "\n\n" + r.text; }
+    typeText(scene, function(){
+      if(state.phase !== "text") return;
+      renderChoices(r);
+    });
+  }
+  function renderChoices(r){
+    var box = $("choices"); box.innerHTML = "";
+    [["A", r.a, "oa"],["B", r.b, "ob"]].forEach(function(cfg){
+      var b = document.createElement("button");
+      b.className = "choice";
+      b.innerHTML = '<span class="tag">'+cfg[0]+'</span>'+cfg[1];
+      b.addEventListener("click", function(){ choose(cfg[0], cfg[2]); });
+      box.appendChild(b);
+    });
+  }
+  function choose(letter, key){
+    if(state.phase !== "text") return;
+    state.phase = "outcome";
+    if(letter === "A") state.tendA++; else state.tendB++;
+    state.path = letter;
+    save(); hud();
+    $("choices").innerHTML = "";
+    var r = ROUNDS[state.i];
+    typeText(r[key], function(){
+      if(state.phase !== "outcome") return;
+      $("next-btn").style.display = "inline-block";
+      $("next-btn").textContent = (state.i === ROUNDS.length-1) ? "终章" : "继续";
+    });
+  }
+  $("next-btn").addEventListener("click", function(){
+    if(state.i >= ROUNDS.length-1){ showEnd(); return; }
+    state.i++; showRound();
+  });
+
+  function showEnd(){
+    state.phase = "end"; clearSave();
+    var r = ROUNDS[ROUNDS.length-1];
+    var total = state.tendA + state.tendB || 1;
+    var pA = Math.round(state.tendA/total*100);
+    var endName = state.tendA >= state.tendB ? "雪夜白头" : "执手烽烟";
+    $("game-screen").style.display = "none";
+    $("end-screen").style.display = "flex";
+    $("end-title").textContent = "结局 ｜ " + endName;
+    $("end-stats").innerHTML =
+      "五十轮已尽 双线皆通<br>心迹沉淀：隐忍 "+state.tendA+" ｜ 偏执 "+state.tendB+"（"+pA+"% 隐忍）<br>——玉簪花开时，再会——";
+  }
+  $("restart-btn").addEventListener("click", function(){
+    state = { i:0, tendA:0, tendB:0, path:null, phase:"text" };
+    clearSave();
+    $("end-screen").style.display = "none";
+    $("game-screen").style.display = "block";
+    showRound();
+  });
+
+  /* ---------- 入口 ---------- */
+  $("start-btn").addEventListener("click", function(){
+    clearSave();
+    state = { i:0, tendA:0, tendB:0, path:null, phase:"text" };
+    $("title-screen").style.display = "none";
+    $("game-screen").style.display = "block";
+    showRound();
+  });
+  var sv = load();
+  if(sv){ $("continue-btn").style.display = ""; }
+  $("continue-btn").addEventListener("click", function(){
+    state = { i:sv.i, tendA:sv.tendA, tendB:sv.tendB, path:sv.path||null, phase:"text" };
+    $("title-screen").style.display = "none";
+    $("game-screen").style.display = "block";
+    showRound();
+  });
+
+  setBg(0);
+})();
+</script>
+</body>
+</html>
